@@ -1,0 +1,69 @@
+#! /usr/bin/env ruby
+
+require 'json'
+require 'optparse'
+
+class Rbjo
+  Config = {}
+
+  class << self
+    def start(argv)
+      @opt = OptionParser.new
+      @opt.on('-a') { |_| Config[:a] = true }
+      @opt.on('-p') { |_| Config[:p] = true }
+
+      puts parse(argv)
+    end
+
+    private
+
+    def parse(argv)
+      @opt.parse!(argv)
+      return array? ? create_array(argv) : create_object(argv)
+    end
+
+    def create_array(argv)
+      return format(argv)
+    end
+
+    def create_object(argv)
+      result = {}
+      argv.each do |arg|
+        kv = arg.match(/^(.*)=(.*)$/).captures
+        result[kv[0].to_sym] = parse_value(kv[1])
+      end
+      return format(result)
+    end
+
+    def parse_value(value)
+      case value
+      when "true";  return true
+      when "false"; return false
+      when "null";  return nil
+      when /^(\[|\{|\")/;
+        return JSON.parse(value)
+      when /^[0-9]+$/
+        return value.to_i
+      when /^[0-9]+.[0-9]+$/
+        return value.to_f
+      else
+        return value
+      end
+    end
+
+    def format(result)
+      return pretty? ? JSON.pretty_generate(result) : JSON.generate(result)
+    end
+
+    def array?
+      return Config[:a]
+    end
+
+    def pretty?
+      return Config[:p]
+    end
+
+  end
+end
+
+Rbjo.start(ARGV)
